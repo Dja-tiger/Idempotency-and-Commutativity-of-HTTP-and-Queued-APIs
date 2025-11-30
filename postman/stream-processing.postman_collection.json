@@ -1,0 +1,345 @@
+{
+  "info": {
+    "name": "Stream Processing Homework",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Сценарий проверки сервисов пользователей, биллинга, заказов и нотификаций"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://arch.homework",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create user",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.variables.set('userEmail', `user${Date.now()}@example.com`);",
+              "pm.variables.set('userName', 'Demo User');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('created', function () { pm.response.to.have.status(201); });",
+              "var body = pm.response.json();",
+              "pm.collectionVariables.set('userId', body.id);",
+              "pm.collectionVariables.set('userEmail', body.email);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}:8000/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8000",
+          "path": [
+            "users"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"name\": \"{{userName}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Check billing account",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('account exists', function () { pm.response.to.have.status(200); });",
+              "pm.test('balance zero', function () { pm.expect(pm.response.json().balance).to.eql(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}:8001/accounts/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8001",
+          "path": [
+            "accounts",
+            "{{userId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Deposit funds",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('deposit ok', function () { pm.response.to.have.status(200); });",
+              "pm.collectionVariables.set('depositBalance', pm.response.json().balance);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}:8001/accounts/{{userId}}/deposit",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8001",
+          "path": [
+            "accounts",
+            "{{userId}}",
+            "deposit"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 100\n}"
+        }
+      }
+    },
+    {
+      "name": "Create order success",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('order accepted', function () { pm.response.to.have.status(201); });",
+              "var order = pm.response.json();",
+              "pm.collectionVariables.set('successOrderId', order.id);",
+              "pm.collectionVariables.set('expectedBalance', 50);",
+              "pm.test('status confirmed', function () { pm.expect(order.status).to.eql('confirmed'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}:8003/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8003",
+          "path": [
+            "orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": {{userId}},\n  \"price\": 50\n}"
+        }
+      }
+    },
+    {
+      "name": "Check balance after success",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('withdraw applied', function () { pm.expect(pm.response.json().balance).to.eql(50); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}:8001/accounts/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8001",
+          "path": [
+            "accounts",
+            "{{userId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Check notifications success",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('notifications listed', function () { pm.response.to.have.status(200); });",
+              "var items = pm.response.json().items;",
+              "pm.test('at least one notification', function () { pm.expect(items.length).to.be.above(0); });",
+              "var last = items[items.length - 1];",
+              "pm.test('happiness letter', function () { pm.expect(last.body).to.include('Письмо счастья'); });",
+              "pm.collectionVariables.set('notificationCount', items.length);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}:8002/notifications?user_id={{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8002",
+          "path": [
+            "notifications"
+          ],
+          "query": [
+            {
+              "key": "user_id",
+              "value": "{{userId}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create order fail",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('order processed', function () { pm.response.to.have.status(201); });",
+              "pm.test('status failed', function () { pm.expect(pm.response.json().status).to.eql('failed'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}:8003/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8003",
+          "path": [
+            "orders"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": {{userId}},\n  \"price\": 80\n}"
+        }
+      }
+    },
+    {
+      "name": "Balance unchanged after fail",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('balance not changed', function () { pm.expect(pm.response.json().balance).to.eql(50); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}:8001/accounts/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8001",
+          "path": [
+            "accounts",
+            "{{userId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Notifications after fail",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('notifications returned', function () { pm.response.to.have.status(200); });",
+              "var items = pm.response.json().items;",
+              "pm.test('new notification', function () { pm.expect(items.length).to.be.above(pm.collectionVariables.get('notificationCount')); });",
+              "var last = items[items.length - 1];",
+              "pm.test('sad letter', function () { pm.expect(last.body).to.include('Письмо горя'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}:8002/notifications?user_id={{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "port": "8002",
+          "path": [
+            "notifications"
+          ],
+          "query": [
+            {
+              "key": "user_id",
+              "value": "{{userId}}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

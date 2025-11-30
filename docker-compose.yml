@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  user:
+    build: .
+    command: uvicorn services.user_service.main:app --host 0.0.0.0 --port 8000
+    environment:
+      - BILLING_SERVICE_URL=http://billing:8001
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services:/app/services
+
+  billing:
+    build: .
+    command: uvicorn services.billing_service.main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services:/app/services
+
+  notification:
+    build: .
+    command: uvicorn services.notification_service.main:app --host 0.0.0.0 --port 8002
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./services:/app/services
+
+  order:
+    build: .
+    command: uvicorn services.order_service.main:app --host 0.0.0.0 --port 8003
+    environment:
+      - USER_SERVICE_URL=http://user:8000
+      - BILLING_SERVICE_URL=http://billing:8001
+      - NOTIFICATION_SERVICE_URL=http://notification:8002
+    ports:
+      - "8003:8003"
+    depends_on:
+      - user
+      - billing
+      - notification
+    volumes:
+      - ./services:/app/services

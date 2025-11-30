@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520">
+  <style>
+    .box { fill: #e8f1fb; stroke: #1f4b99; stroke-width: 2; }
+    .arrow { stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); fill: none; }
+    .label { font-family: Arial, sans-serif; font-size: 14px; }
+    .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+
+  <text x="20" y="30" class="title">HTTP orchestration: заказ</text>
+
+  <rect class="box" x="80" y="80" width="160" height="70" rx="8"/>
+  <text x="100" y="120" class="label">User Service</text>
+  <text x="100" y="140" class="label">порт 8000</text>
+
+  <rect class="box" x="340" y="80" width="160" height="70" rx="8"/>
+  <text x="360" y="120" class="label">Billing Service</text>
+  <text x="360" y="140" class="label">порт 8001</text>
+
+  <rect class="box" x="600" y="80" width="190" height="70" rx="8"/>
+  <text x="620" y="120" class="label">Notification Service</text>
+  <text x="620" y="140" class="label">порт 8002</text>
+
+  <rect class="box" x="340" y="260" width="160" height="70" rx="8"/>
+  <text x="360" y="300" class="label">Order Service</text>
+  <text x="360" y="320" class="label">порт 8003</text>
+
+  <rect class="box" x="80" y="260" width="160" height="70" rx="8"/>
+  <text x="100" y="300" class="label">Клиент</text>
+  <text x="100" y="320" class="label">newman / Postman</text>
+
+  <line class="arrow" x1="240" y1="295" x2="340" y2="295" />
+  <text x="250" y="285" class="label">POST /orders</text>
+
+  <line class="arrow" x1="420" y1="330" x2="420" y2="150" />
+  <text x="430" y="230" class="label">withdraw</text>
+
+  <line class="arrow" x1="500" y1="115" x2="600" y2="115" />
+  <text x="510" y="105" class="label">send notification</text>
+
+  <line class="arrow" x1="420" y1="260" x2="420" y2="150" marker-end="url(#arrowhead)" />
+  <line class="arrow" x1="420" y1="150" x2="420" y2="260" marker-end="url(#arrowhead)" />
+
+  <line class="arrow" x1="240" y1="120" x2="340" y2="120" />
+  <text x="250" y="110" class="label">create account</text>
+
+  <line class="arrow" x1="160" y1="150" x2="160" y2="260" />
+  <text x="90" y="210" class="label">GET/POST</text>
+
+  <text x="650" y="210" class="label">Письма сохраняются</text>
+  <text x="650" y="230" class="label">в базе уведомлений</text>
+</svg>

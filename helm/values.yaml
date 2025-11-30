@@ -1,0 +1,52 @@
+image:
+  repository: stream-processing
+  tag: latest
+  pullPolicy: IfNotPresent
+
+services:
+  user:
+    port: 8000
+    command:
+      - uvicorn
+      - services.user_service.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    env:
+      - name: BILLING_SERVICE_URL
+        value: http://billing:8001
+  billing:
+    port: 8001
+    command:
+      - uvicorn
+      - services.billing_service.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8001"
+  notification:
+    port: 8002
+    command:
+      - uvicorn
+      - services.notification_service.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8002"
+  order:
+    port: 8003
+    command:
+      - uvicorn
+      - services.order_service.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8003"
+    env:
+      - name: USER_SERVICE_URL
+        value: http://user:8000
+      - name: BILLING_SERVICE_URL
+        value: http://billing:8001
+      - name: NOTIFICATION_SERVICE_URL
+        value: http://notification:8002
