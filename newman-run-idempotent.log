@@ -1,0 +1,334 @@
+newman
+
+Stream Processing Homework
+
+→ Create user
+  POST http://arch.homework:8000/users  
+  201 Created ★ 54ms time ★ 357B↑ 197B↓ size ★ 9↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 69B
+  │ {
+  │   "email": "user1764502108488@example.com",
+  │   "name": "Demo User"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 67B
+  │ {"id":1,"email":"user1764502108488@example.com","name"
+  │ :"Demo User"}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  6ms       5ms    1ms          597µs           39ms             5ms        126µs     60ms  
+
+  ✓  created
+
+→ Check billing account
+  GET http://arch.homework:8001/accounts/1  
+  200 OK ★ 6ms time ★ 240B↑ 152B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 27B
+  │ {"user_id":1,"balance":0.0}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  309µs     290µs   1ms          404µs           3ms              527µs      23µs      6ms   
+
+  ✓  account exists
+  ✓  balance zero
+
+→ Deposit funds
+  POST http://arch.homework:8001/accounts/1/deposit  
+  200 OK ★ 6ms time ★ 320B↑ 154B↓ size ★ 9↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 19B
+  │ {
+  │   "amount": 100
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 29B
+  │ {"user_id":1,"balance":100.0}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  299µs     204µs   (cache)      (cache)         5ms              379µs      26µs      6ms   
+
+  ✓  deposit ok
+
+→ Create order success
+  POST http://arch.homework:8003/orders  
+  201 Created ★ 35ms time ★ 322B↑ 342B↓ size ★ 9↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 33B
+  │ {
+  │   "user_id": 1,
+  │   "price": 50
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 211B
+  │ {"id":1,"user_id":1,"price":50.0,"status":"confirmed",
+  │ "message":"Письмо счастья: заказ на сумму 50.0 подтвер
+  │ жден. Баланс 50.0","created_at":"2025-11-30T11:28:28.6
+  │ 29771"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  263µs     219µs   937µs        254µs           32ms             371µs      23µs      34ms  
+
+  ✓  order accepted
+  ✓  status confirmed
+
+→ Check balance after success
+  GET http://arch.homework:8001/accounts/1  
+  200 OK ★ 3ms time ★ 240B↑ 153B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"user_id":1,"balance":50.0}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  291µs     167µs   (cache)      (cache)         2ms              427µs      30µs      2ms   
+
+  ✓  withdraw applied
+
+→ Check notifications success
+  GET http://arch.homework:8002/notifications?user_id=1  
+  200 OK ★ 6ms time ★ 253B↑ 417B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 291B
+  │ {"items":[{"id":1,"user_id":1,"email":"user17645021084
+  │ 88@example.com","subject":"Результат оформления заказа
+  │ ","body":"Письмо счастья: заказ на сумму 50.0 подтверж
+  │ ден. Баланс 50.0","created_at":"2025-11-30T11:28:28.64
+  │ 2538"}]}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  332µs     222µs   1ms          346µs           3ms              325µs      25µs      6ms   
+
+  ✓  notifications listed
+  ✓  at least one notification
+  ✓  happiness letter
+
+→ Create order fail
+  POST http://arch.homework:8003/orders  
+  201 Created ★ 13ms time ★ 322B↑ 319B↓ size ★ 9↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 33B
+  │ {
+  │   "user_id": 1,
+  │   "price": 80
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 188B
+  │ {"id":2,"user_id":1,"price":80.0,"status":"failed","me
+  │ ssage":"Письмо горя: не удалось списать 80.0. Insuffic
+  │ ient funds","created_at":"2025-11-30T11:28:28.694142"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  280µs     165µs   (cache)      (cache)         12ms             327µs      21µs      13ms  
+
+  ✓  order processed
+  ✓  status failed
+
+→ Balance unchanged after fail
+  GET http://arch.homework:8001/accounts/1  
+  200 OK ★ 3ms time ★ 240B↑ 153B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"user_id":1,"balance":50.0}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  234µs     138µs   (cache)      (cache)         2ms              311µs      18µs      2ms   
+
+  ✓  balance not changed
+
+→ Notifications after fail
+  GET http://arch.homework:8002/notifications?user_id=1  
+  200 OK ★ 3ms time ★ 253B↑ 677B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 551B
+  │ {"items":[{"id":1,"user_id":1,"email":"user17645021084
+  │ 88@example.com","subject":"Результат оформления заказа
+  │ ","body":"Письмо счастья: заказ на сумму 50.0 подтверж
+  │ ден. Баланс 50.0","created_at":"2025-11-30T11:28:28.64
+  │ 2538"},{"id":2,"user_id":1,"email":"user1764502108488@
+  │ example.com","subject":"Результат оформления заказа","
+  │ body":"Письмо горя: не удалось списать 80.0. Insuffici
+  │ ent funds","created_at":"2025-11-30T11:28:28.697345"}]
+  │ }
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  255µs     113µs   (cache)      (cache)         2ms              248µs      20µs      2ms   
+
+  ✓  notifications returned
+  ✓  new notification
+  ✓  sad letter
+
+❏ Idempotent Create Order
+↳ Idempotent - Create user
+  POST http://arch.homework:8000/users  
+  201 Created ★ 10ms time ★ 363B↑ 203B↓ size ★ 9↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 75B
+  │ {
+  │   "email": "idem1764502108736@example.com",
+  │   "name": "Idempotent User"
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 73B
+  │ {"id":2,"email":"idem1764502108736@example.com","name"
+  │ :"Idempotent User"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  308µs     163µs   (cache)      (cache)         8ms              367µs      26µs      9ms   
+
+  ✓  created
+
+↳ Idempotent - Deposit funds
+  POST http://arch.homework:8001/accounts/2/deposit  
+  200 OK ★ 4ms time ★ 320B↑ 154B↓ size ★ 9↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 19B
+  │ {
+  │   "amount": 100
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 29B
+  │ {"user_id":2,"balance":100.0}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  190µs     96µs   (cache)      (cache)         3ms              232µs      13µs      4ms   
+
+  ✓  deposit ok
+
+↳ Idempotent - Create order with key (first)
+  POST http://arch.homework:8003/orders  
+  201 Created ★ 14ms time ★ 353B↑ 342B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 33B
+  │ {
+  │   "user_id": 2,
+  │   "price": 50
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 211B
+  │ {"id":3,"user_id":2,"price":50.0,"status":"confirmed",
+  │ "message":"Письмо счастья: заказ на сумму 50.0 подтвер
+  │ жден. Баланс 50.0","created_at":"2025-11-30T11:28:28.7
+  │ 81332"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  227µs     107µs   (cache)      (cache)         13ms             306µs      12µs      13ms  
+
+  ✓  order accepted
+  ✓  status confirmed
+
+↳ Idempotent - Repeat order with same key
+  POST http://arch.homework:8003/orders  
+  201 Created ★ 3ms time ★ 353B↑ 342B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 33B
+  │ {
+  │   "user_id": 2,
+  │   "price": 50
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 211B
+  │ {"id":3,"user_id":2,"price":50.0,"status":"confirmed",
+  │ "message":"Письмо счастья: заказ на сумму 50.0 подтвер
+  │ жден. Баланс 50.0","created_at":"2025-11-30T11:28:28.7
+  │ 81332"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  201µs     105µs   (cache)      (cache)         1ms              243µs      12µs      2ms   
+
+  ✓  idempotent repeat
+  ✓  same order id
+  ✓  same message
+
+↳ Idempotent - Balance after duplicate requests
+  GET http://arch.homework:8001/accounts/2  
+  200 OK ★ 3ms time ★ 240B↑ 153B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"user_id":2,"balance":50.0}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  242µs     95µs   (cache)      (cache)         1ms              257µs      12µs      2ms   
+
+  ✓  single withdrawal
+
+↳ Idempotent - Notifications after duplicate requests
+  GET http://arch.homework:8002/notifications?user_id=2  
+  200 OK ★ 3ms time ★ 253B↑ 417B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 291B
+  │ {"items":[{"id":3,"user_id":2,"email":"idem17645021087
+  │ 36@example.com","subject":"Результат оформления заказа
+  │ ","body":"Письмо счастья: заказ на сумму 50.0 подтверж
+  │ ден. Баланс 50.0","created_at":"2025-11-30T11:28:28.78
+  │ 3990"}]}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  234µs     82µs   (cache)      (cache)         2ms              224µs      11µs      2ms   
+
+  ✓  notifications listed
+  ✓  single notification
+  ✓  message matches
+
+↳ Idempotent - Create order with new key
+  POST http://arch.homework:8003/orders  
+  201 Created ★ 15ms time ★ 353B↑ 342B↓ size ★ 10↑ 4↓ headers ★ 0 cookies
+  ┌ ↑ raw ★ 33B
+  │ {
+  │   "user_id": 2,
+  │   "price": 20
+  │ }
+  └ 
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 211B
+  │ {"id":4,"user_id":2,"price":20.0,"status":"confirmed",
+  │ "message":"Письмо счастья: заказ на сумму 20.0 подтвер
+  │ жден. Баланс 30.0","created_at":"2025-11-30T11:28:28.8
+  │ 45324"}
+  └
+  prepare   wait    dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  199µs     112µs   (cache)      (cache)         14ms             267µs      10µs      14ms  
+
+  ✓  order accepted
+  ✓  new order id
+  ✓  status confirmed
+
+↳ Idempotent - Balance after new key
+  GET http://arch.homework:8001/accounts/2  
+  200 OK ★ 2ms time ★ 240B↑ 153B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 28B
+  │ {"user_id":2,"balance":30.0}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  179µs     81µs   (cache)      (cache)         1ms              190µs      10µs      2ms   
+
+  ✓  second withdrawal applied
+
+↳ Idempotent - Notifications after new key
+  GET http://arch.homework:8002/notifications?user_id=2  
+  200 OK ★ 3ms time ★ 253B↑ 697B↓ size ★ 7↑ 4↓ headers ★ 0 cookies
+  ┌ ↓ application/json ★ text ★ json ★ utf8 ★ 571B
+  │ {"items":[{"id":3,"user_id":2,"email":"idem17645021087
+  │ 36@example.com","subject":"Результат оформления заказа
+  │ ","body":"Письмо счастья: заказ на сумму 50.0 подтверж
+  │ ден. Баланс 50.0","created_at":"2025-11-30T11:28:28.78
+  │ 3990"},{"id":4,"user_id":2,"email":"idem1764502108736@
+  │ example.com","subject":"Результат оформления заказа","
+  │ body":"Письмо счастья: заказ на сумму 20.0 подтвержден
+  │ . Баланс 30.0","created_at":"2025-11-30T11:28:28.84803
+  │ 5"}]}
+  └
+  prepare   wait   dns-lookup   tcp-handshake   transfer-start   download   process   total 
+  219µs     83µs   (cache)      (cache)         2ms              227µs      11µs      3ms   
+
+  ✓  notifications listed
+  ✓  two notifications total
+  ✓  contains previous message
+
+┌─────────────────────────┬────────────────────┬───────────────────┐
+│                         │           executed │            failed │
+├─────────────────────────┼────────────────────┼───────────────────┤
+│              iterations │                  1 │                 0 │
+├─────────────────────────┼────────────────────┼───────────────────┤
+│                requests │                 18 │                 0 │
+├─────────────────────────┼────────────────────┼───────────────────┤
+│            test-scripts │                 18 │                 0 │
+├─────────────────────────┼────────────────────┼───────────────────┤
+│      prerequest-scripts │                  2 │                 0 │
+├─────────────────────────┼────────────────────┼───────────────────┤
+│              assertions │                 34 │                 0 │
+├─────────────────────────┴────────────────────┴───────────────────┤
+│ total run duration: 398ms                                        │
+├──────────────────────────────────────────────────────────────────┤
+│ total data received: 3.07kB (approx)                             │
+├──────────────────────────────────────────────────────────────────┤
+│ average response time: 10ms [min: 2ms, max: 54ms, s.d.: 13ms]    │
+├──────────────────────────────────────────────────────────────────┤
+│ average DNS lookup time: 1ms [min: 937µs, max: 1ms, s.d.: 274µs] │
+├──────────────────────────────────────────────────────────────────┤
+│ average first byte time: 8ms [min: 1ms, max: 39ms, s.d.: 10ms]   │
+└──────────────────────────────────────────────────────────────────┘
