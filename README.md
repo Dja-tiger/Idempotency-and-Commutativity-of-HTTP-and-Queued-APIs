@@ -8,6 +8,9 @@
 - notification-service: `http://localhost:8002`
 - order-service: `http://localhost:8003`
 
+## Идемпотентность POST /orders
+Паттерн: **Idempotency-Key + локальное хранилище результата**. Клиент передаёт заголовок `Idempotency-Key`, а сервис хранит ключ в таблице заказов. Повторный запрос с тем же ключом возвращает ранее созданный заказ без повторного списания средств и без повторной отправки уведомления. Для защиты от гонок ключ помечен как `unique`, а при конфликте по ключу сервис повторно читает и возвращает сохранённый заказ.
+
 ## Архитектура
 Описание вариантов взаимодействия и схема – в [docs/architecture.md](docs/architecture.md). Картинка схемы: [docs/architecture.svg](docs/architecture.svg).
 
@@ -19,7 +22,7 @@ docker compose up --build
 ## Проверка через Newman
 
 Для проверки сценария ДЗ используется коллекция `postman/stream-processing.postman_collection.json`
-c переменной `{{baseUrl}}`, initial value — `http://arch.homework`.
+c переменной `{{baseUrl}}`, initial value — `arch.homework`.
 
 Пример прогона:
 
@@ -33,11 +36,12 @@ newman run postman/stream-processing.postman_collection.json \
   --verbose | tee newman-run.log
 
 
-Сценарий проходит этапы: создание пользователя с аккаунтом, пополнение, успешный заказ, проверка баланса и уведомлений, неуспешный заказ при недостатке средств и проверка, что баланс не изменился, а уведомление добавилось.
+Сценарий проходит этапы: создание пользователя с аккаунтом, пополнение, успешный заказ, проверка баланса и уведомлений, неуспешный заказ при недостатке средств и проверка, что баланс не изменился, а уведомление добавилось. Дополнительно добавлена папка **Idempotent Create Order** с шагами, подтверждающими работу `Idempotency-Key`: повторный POST `/orders` с тем же ключом не списывает средства повторно и не создаёт дублирующее уведомление.
 
 ## Helm-установка
 Соберите и опубликуйте образ `stream-processing:latest` (значение по умолчанию в values). Затем установите чарта в namespace `stream-processing`:
 ```bash
+kubectl create namespace stream-processing
 helm install stream-processing ./helm -n stream-processing --create-namespace \
   --set image.repository=<ваш-репозиторий> --set image.tag=<ваш-тег>
 ```

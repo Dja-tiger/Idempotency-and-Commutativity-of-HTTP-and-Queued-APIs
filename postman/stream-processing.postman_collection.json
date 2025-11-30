@@ -7,7 +7,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://arch.homework",
+      "value": "arch.homework",
       "type": "string"
     }
   ],
@@ -340,6 +340,364 @@
           ]
         }
       }
+    },
+    {
+      "name": "Idempotent Create Order",
+      "item": [
+        {
+          "name": "Idempotent - Create user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.variables.set('idemUserEmail', `idem${Date.now()}@example.com`);",
+                  "pm.variables.set('idemUserName', 'Idempotent User');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('idemUserId', body.id);",
+                  "pm.collectionVariables.set('idemUserEmail', body.email);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}:8000/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8000",
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{idemUserEmail}}\",\n  \"name\": \"{{idemUserName}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Idempotent - Deposit funds",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('deposit ok', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('idemBalance', pm.response.json().balance);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}:8001/accounts/{{idemUserId}}/deposit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8001",
+              "path": [
+                "accounts",
+                "{{idemUserId}}",
+                "deposit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 100\n}"
+            }
+          }
+        },
+        {
+          "name": "Idempotent - Create order with key (first)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('order accepted', function () { pm.response.to.have.status(201); });",
+                  "var order = pm.response.json();",
+                  "pm.collectionVariables.set('idemOrderId', order.id);",
+                  "pm.collectionVariables.set('idemMessage', order.message);",
+                  "pm.test('status confirmed', function () { pm.expect(order.status).to.eql('confirmed'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "test-key-123"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}:8003/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8003",
+              "path": [
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{idemUserId}},\n  \"price\": 50\n}"
+            }
+          }
+        },
+        {
+          "name": "Idempotent - Repeat order with same key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('idempotent repeat', function () { pm.response.to.have.status(201); });",
+                  "var order = pm.response.json();",
+                  "pm.test('same order id', function () { pm.expect(order.id).to.eql(pm.collectionVariables.get('idemOrderId')); });",
+                  "pm.test('same message', function () { pm.expect(order.message).to.eql(pm.collectionVariables.get('idemMessage')); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "test-key-123"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}:8003/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8003",
+              "path": [
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{idemUserId}},\n  \"price\": 50\n}"
+            }
+          }
+        },
+        {
+          "name": "Idempotent - Balance after duplicate requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('single withdrawal', function () { pm.expect(pm.response.json().balance).to.eql(50); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}:8001/accounts/{{idemUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8001",
+              "path": [
+                "accounts",
+                "{{idemUserId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Idempotent - Notifications after duplicate requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('notifications listed', function () { pm.response.to.have.status(200); });",
+                  "var items = pm.response.json().items;",
+                  "pm.collectionVariables.set('idemNotificationCount', items.length);",
+                  "pm.test('single notification', function () { pm.expect(items.length).to.eql(1); });",
+                  "pm.test('message matches', function () { pm.expect(items[0].body).to.eql(pm.collectionVariables.get('idemMessage')); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}:8002/notifications?user_id={{idemUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8002",
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{idemUserId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Idempotent - Create order with new key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('order accepted', function () { pm.response.to.have.status(201); });",
+                  "var order = pm.response.json();",
+                  "pm.test('new order id', function () { pm.expect(order.id).to.not.eql(pm.collectionVariables.get('idemOrderId')); });",
+                  "pm.test('status confirmed', function () { pm.expect(order.status).to.eql('confirmed'); });",
+                  "pm.collectionVariables.set('idemOrderId2', order.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "test-key-456"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}:8003/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8003",
+              "path": [
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{idemUserId}},\n  \"price\": 20\n}"
+            }
+          }
+        },
+        {
+          "name": "Idempotent - Balance after new key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('second withdrawal applied', function () { pm.expect(pm.response.json().balance).to.eql(30); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}:8001/accounts/{{idemUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8001",
+              "path": [
+                "accounts",
+                "{{idemUserId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Idempotent - Notifications after new key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('notifications listed', function () { pm.response.to.have.status(200); });",
+                  "var items = pm.response.json().items;",
+                  "pm.test('two notifications total', function () { pm.expect(items.length).to.eql(2); });",
+                  "pm.test('contains previous message', function () { pm.expect(items[0].body).to.eql(pm.collectionVariables.get('idemMessage')); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}:8002/notifications?user_id={{idemUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "port": "8002",
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{idemUserId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

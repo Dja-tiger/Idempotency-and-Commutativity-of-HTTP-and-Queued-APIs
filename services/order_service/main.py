@@ -1,10 +1,11 @@
 import os
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from .clients import BillingClient, NotificationClient, UserClient
 from .db import get_engine, get_session, init_db
-from .models import Order, OrderCreate, OrderRead
+from .models import Order, OrderCreate, OrderRead, OrderStatus
 
 
 def create_app() -> FastAPI:
@@ -24,7 +25,18 @@ def create_app() -> FastAPI:
         await user_client.close()
 
     @app.post("/orders", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
-    async def create_order(payload: OrderCreate, session=Depends(session_provider)):
+    async def create_order(
+        payload: OrderCreate,
+        idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+        session=Depends(session_provider),
+    ):
+        if idempotency_key:
+            existing_order = session.exec(
+                select(Order).where(Order.idempotency_key == idempotency_key)
+            ).first()
+            if existing_order:
+                return OrderRead(**existing_order.model_dump())
+
         try:
             user = await user_client.get_user(payload.user_id)
         except Exception:
@@ -41,12 +53,34 @@ def create_app() -> FastAPI:
             withdrawal_success = False
             message = "Billing unavailable"
 
-        status_value = "confirmed" if withdrawal_success else "failed"
+        status_value = OrderStatus.CONFIRMED if withdrawal_success else OrderStatus.FAILED
         email_body = (
             f"Письмо счастья: заказ на сумму {payload.price} подтвержден. Баланс {payment.get('balance', 'n/a')}"
             if withdrawal_success
             else f"Письмо горя: не удалось списать {payload.price}. {message}"
         )
+
+        order = Order(
+            user_id=payload.user_id,
+            price=payload.price,
+            status=status_value,
+            message=email_body,
+            idempotency_key=idempotency_key,
+        )
+        session.add(order)
+
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            existing_order = session.exec(
+                select(Order).where(Order.idempotency_key == idempotency_key)
+            ).first()
+            if existing_order:
+                return OrderRead(**existing_order.model_dump())
+            raise
+
+        session.refresh(order)
 
         await notification_client.send_email(
             user_id=payload.user_id,
@@ -54,11 +88,6 @@ def create_app() -> FastAPI:
             subject="Результат оформления заказа",
             body=email_body,
         )
-
-        order = Order(user_id=payload.user_id, price=payload.price, status=status_value, message=email_body)
-        session.add(order)
-        session.commit()
-        session.refresh(order)
 
         return OrderRead(**order.model_dump())
 
